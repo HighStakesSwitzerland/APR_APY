@@ -16,24 +16,26 @@ class GetAprApy(Thread):
         try:
             self.VALIDATOR = data[0]
             self.PORT = data[1]
-            self.TOKEN = data[2]
-            self.COMMISSION = float(data[3])
+            self.COMMISSION = float(data[2])
+
+            self.base_url = f"http://localhost:{self.PORT}/cosmos"  # default is 1317 for the node API
+            self.inflation_url = "/mint/v1beta1/inflation"
+            self.bonded_token_url = "/staking/v1beta1/pool"
+            self.supply_url = "/bank/v1beta1/supply"
+            self.distribution_params_url = "/distribution/v1beta1/params"
+            self.mint_params_url = "/mint/v1beta1/params"
+            self.blocks_url = "/base/tendermint/v1beta1/blocks/"
+
+            #let's also retrieve the token name directly from the api
+            self.TOKEN = get(self.base_url+self.mint_params_url).json()['params']['mint_denom']
+
         except:
-            print("\nGarbage was supplied. Please run with for example (with a 5% commission):\n\npython3 apr_apy.py -i desmos 1317 udsm 0.05\n")
+            print("\nGarbage was supplied. Please run with for example (with a 5% commission):\n\npython3 apr_apy.py -i desmos 1317 0.05\n")
             for proc in process_iter():
                 if "apr_apy.py" in proc.cmdline():
                     proc.kill()
-#            exit(1)
 
-        self.base_url = f"http://localhost:{self.PORT}" #default is 1317 for the node API
-        self.inflation_url = "/cosmos/mint/v1beta1/inflation"
-        self.bonded_token_url = "/cosmos/staking/v1beta1/pool"
-        self.supply_url = "/cosmos/bank/v1beta1/supply"
-        self.distribution_params_url = "/cosmos/distribution/v1beta1/params"
-        self.mint_params_url = "/cosmos/mint/v1beta1/params"
-        self.blocks_url = "/cosmos/base/tendermint/v1beta1/blocks/"
-        # self.token = 'udaric' #change that to the appropriate token name
-        # self.commission = 0.05 # the validator commission, let's say 5%.
+
 
         self.apr = 0
         self.apy = 0
@@ -51,6 +53,8 @@ class GetAprApy(Thread):
 
 
     def run(self):
+
+        #first let's retrieve the token name
 
         while True:
             #we need to retrieve the metrics (supply, inflation, number of bonded tokens and more) to calculate the APR & APY.
@@ -128,7 +132,7 @@ class GetAprApy(Thread):
 
 
 parser = ArgumentParser()
-parser.add_argument('-i', nargs='+', action='append', help='Usage: python3 apr_apy.py -i validator1 port1 token1 commission1 -i validator2 port2 token2 commission2 etc.')
+parser.add_argument('-i', nargs='+', action='append', help='Usage: python3 apr_apy.py -i validator1 port1 commission1 -i validator2 port2 commission2 etc.')
 args = parser.parse_args()
 
 app = None

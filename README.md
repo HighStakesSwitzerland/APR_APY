@@ -4,9 +4,7 @@ Retrieve the APR and APY (for daily compounding) for a Cosmos-based blockchain t
 
 The node API server must be enabled on the node (port 1317 by default).
 
-Usage: <code>python3 apr_apy -i validator1 port1 token1 commission1 -i validator2 port2 token2 commission2 etc.<code>
-
-Note: the token should be the 'utoken', e.g. urowan or uxprt or whatever.
+Usage: <code>python3 apr_apy -i validator1 port1 commission1 -i validator2 port2 commission2 etc.<code>
 
 The program serves an API at localhost:5006/{validator_name}. Values are updated every 24h.
 
