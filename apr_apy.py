@@ -21,7 +21,7 @@ class GetAprApy(Thread):
             self.base_url = f"http://localhost:{self.PORT}/cosmos"  # default is 1317 for the node API
             self.inflation_url = "/mint/v1beta1/inflation"
             self.bonded_token_url = "/staking/v1beta1/pool"
-            self.supply_url = "/bank/v1beta1/supply"
+            self.supply_url = "/bank/v1beta1/supply?pagination.key=" #some chains have multiple pages here
             self.distribution_params_url = "/distribution/v1beta1/params"
             self.mint_params_url = "/mint/v1beta1/params"
             self.blocks_url = "/base/tendermint/v1beta1/blocks/"
@@ -61,8 +61,18 @@ class GetAprApy(Thread):
 
             # My deepest apologies for probably the worst piece of code ever written.
             try:
-                supply = get(self.base_url+self.supply_url).json()
-                supply = int(findall('\d+', str([i for i in supply['supply'] if self.TOKEN in i['denom']][0]))[0])
+                key = ''
+                supply = 0
+                while True:
+                    data = get(self.base_url+self.supply_url+key).json()
+                    key = data['pagination']['next_key']
+                    try:
+                        supply = int(findall('\d+', str([i for i in data['supply'] if self.TOKEN in i['denom']][0]))[0])
+                        break
+                    except:
+                        pass
+                    if not key:
+                        break
 
                 inflation = get(self.base_url+self.inflation_url).text
                 inflation = float(findall('\d+.\d+', inflation)[0])*100
