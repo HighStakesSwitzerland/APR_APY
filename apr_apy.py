@@ -18,13 +18,19 @@ class GetAprApy(Thread):
             self.PORT = data[1]
             self.COMMISSION = float(data[2])
 
-            self.base_url = f"http://localhost:{self.PORT}/cosmos"  # default is 1317 for the node API
-            self.inflation_url = "/mint/v1beta1/inflation"
-            self.bonded_token_url = "/staking/v1beta1/pool"
-            self.supply_url = "/bank/v1beta1/supply?pagination.key=" #some chains have multiple pages here
-            self.distribution_params_url = "/distribution/v1beta1/params"
-            self.mint_params_url = "/mint/v1beta1/params"
-            self.blocks_url = "/base/tendermint/v1beta1/blocks/"
+            self.base_url = f"http://localhost:{self.PORT}"  # default is 1317 for the node API
+
+            if 'iris' in self.VALIDATOR: #need a specific config
+                self.mint_params_url = "/irishub/mint/params"
+                self.inflation_url = "/irishub/mint/params"
+            else:
+                self.inflation_url = "/cosmos/mint/v1beta1/inflation"
+                self.mint_params_url = "/cosmos/mint/v1beta1/params"
+
+            self.bonded_token_url = "/cosmos/staking/v1beta1/pool"
+            self.supply_url = "/cosmos/bank/v1beta1/supply?pagination.key=" #some chains have multiple pages here
+            self.distribution_params_url = "/cosmos/distribution/v1beta1/params"
+            self.blocks_url = "/cosmos/base/tendermint/v1beta1/blocks/"
 
             #let's also retrieve the token name directly from the api
             self.TOKEN = get(self.base_url+self.mint_params_url).json()['params']['mint_denom']
@@ -34,8 +40,6 @@ class GetAprApy(Thread):
             for proc in process_iter():
                 if "apr_apy.py" in proc.cmdline():
                     proc.kill()
-
-
 
         self.apr = 0
         self.apy = 0
@@ -77,6 +81,8 @@ class GetAprApy(Thread):
                 inflation = get(self.base_url+self.inflation_url).text
                 inflation = float(findall('\d+.\d+', inflation)[0])*100
 
+                print(inflation)
+
                 bonded_tokens = get(self.base_url+self.bonded_token_url).text
                 bonded_tokens = int(findall('(?<="bonded_tokens": ")\d+', bonded_tokens)[0])
 
@@ -97,14 +103,19 @@ class GetAprApy(Thread):
                 self.apr = self.actual_APR(nominal_apr,theoretical_provision,actual_provision)
                 self.apy = self.APY(self.apr)
 
+                print(self.apr,self.apy)
+
             except Exception as e:
                 print(e)
 
             sleep(86400) #sleep 24h, yes. Idiotic I know.
 
     def theoretical_provision(self):
-        provision = get(self.base_url+self.mint_params_url).json()
-        return int(provision['params']['blocks_per_year'])
+        try:  # this does not work for Iris for example
+            provision = get(self.base_url + self.mint_params_url).json()
+            return int(provision['params']['blocks_per_year'])
+        except:
+            return 6311520  # seems to be the default for most chains.
 
     def actual_provision(self):
         #check the average block time over the last 10k blocks and derive the yearly number of blocks.
@@ -144,7 +155,7 @@ class GetAprApy(Thread):
 parser = ArgumentParser()
 parser.add_argument('-i', nargs='+', action='append', help='Usage: python3 apr_apy.py -i validator1 port1 commission1 -i validator2 port2 commission2 etc.')
 args = parser.parse_args()
-
+print(args)
 app = None
 
 for i in args.i:
